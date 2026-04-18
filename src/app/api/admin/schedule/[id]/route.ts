@@ -37,7 +37,7 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
       primaryDays: number; buddyDays: number; holidays: number; workloadUnits: number
     }>()
 
-    function getEntry(user: { id: string; name: string | null; email: string; callType: string | null; fte: number }) {
+    const getEntry = (user: { id: string; name: string | null; email: string; callType: string | null; fte: number }) => {
       if (!userMap.has(user.id)) {
         userMap.set(user.id, {
           name: user.name, email: user.email,
