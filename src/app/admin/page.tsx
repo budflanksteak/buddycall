@@ -942,6 +942,20 @@ export default function AdminPage() {
               </a>
             </div>
 
+            {selectedSchedule.assignments.filter(a => !a.primaryUser).length > 0 && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-red-800">
+                    {selectedSchedule.assignments.filter(a => !a.primaryUser).length} date{selectedSchedule.assignments.filter(a => !a.primaryUser).length > 1 ? 's' : ''} require manual assignment
+                  </p>
+                  <p className="text-sm text-red-700 mt-0.5">
+                    All faculty had these dates blocked. Use the <strong>Assign</strong> button on each red row to manually assign someone, or adjust faculty blocked dates and re-run auto-assign.
+                  </p>
+                </div>
+              </div>
+            )}
+
             <Card>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
@@ -957,21 +971,31 @@ export default function AdminPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {selectedSchedule.assignments.map(a => (
-                        <tr key={a.id} className="border-b last:border-0 hover:bg-gray-50">
+                      {selectedSchedule.assignments.map(a => {
+                        const isUnassigned = !a.primaryUser
+                        return (
+                        <tr key={a.id} className={`border-b last:border-0 ${isUnassigned ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-gray-50'}`}>
                           <td className="py-2.5 px-4 font-medium">{format(new Date(a.date), 'MM/dd/yyyy')}</td>
                           <td className="py-2.5 px-4 text-muted-foreground">{format(new Date(a.date), 'EEE')}</td>
                           <td className="py-2.5 px-4">
-                            <Badge variant={
-                              a.dayType === 'holiday' ? 'warning' :
-                              a.dayType === 'saturday' ? 'info' : 'secondary'
-                            } className="capitalize text-xs">
-                              {a.dayType}
-                            </Badge>
+                            <div className="flex items-center gap-1.5">
+                              <Badge variant={
+                                a.dayType === 'holiday' ? 'warning' :
+                                a.dayType === 'saturday' ? 'info' : 'secondary'
+                              } className="capitalize text-xs">
+                                {a.dayType}
+                              </Badge>
+                              {isUnassigned && (
+                                <Badge variant="destructive" className="text-xs gap-1">
+                                  <AlertTriangle className="h-2.5 w-2.5" />
+                                  Unassigned
+                                </Badge>
+                              )}
+                            </div>
                           </td>
                           <td className="py-2.5 px-4">
                             {a.primaryUser?.name || a.primaryUser?.email || (
-                              <span className="text-red-400 italic text-xs">Unassigned</span>
+                              <span className="text-red-600 font-medium text-xs italic">— needs assignment —</span>
                             )}
                           </td>
                           <td className="py-2.5 px-4 text-muted-foreground">
@@ -979,17 +1003,18 @@ export default function AdminPage() {
                           </td>
                           <td className="py-2.5 px-4">
                             <Button
-                              variant="ghost"
+                              variant={isUnassigned ? 'default' : 'ghost'}
                               size="sm"
-                              className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                              className={`h-7 px-2 text-xs gap-1 ${isUnassigned ? 'bg-red-600 hover:bg-red-700 text-white' : 'text-muted-foreground hover:text-foreground'}`}
                               onClick={() => openAssignmentEdit(a)}
                             >
                               <Pencil className="h-3 w-3" />
-                              Edit
+                              {isUnassigned ? 'Assign' : 'Edit'}
                             </Button>
                           </td>
                         </tr>
-                      ))}
+                        )
+                      })}
                     </tbody>
                   </table>
                 </div>

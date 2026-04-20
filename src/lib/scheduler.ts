@@ -19,7 +19,7 @@ type CallDay = {
 type Assignment = {
   date: Date
   dayType: string
-  primaryUserId: string
+  primaryUserId: string | null
   buddyUserId?: string
 }
 
@@ -201,7 +201,8 @@ export async function autoAssignSchedule(
     const avail = users.filter(u => isAvailable(u, date))
 
     if (avail.length === 0) {
-      warnings.push(`${format(date, 'MMM d, yyyy')}: No available faculty — unassigned!`)
+      warnings.push(`${format(date, 'MMM d, yyyy')}: No available faculty — left unassigned. Manual assignment required.`)
+      assignments.push({ date, dayType: type, primaryUserId: null })
       continue
     }
 
@@ -269,17 +270,20 @@ export async function autoAssignSchedule(
       data: {
         date: a.date,
         dayType: a.dayType,
-        assignmentType: a.buddyUserId ? 'buddy-pair' : 'primary',
-        primaryUserId: a.primaryUserId,
-        buddyUserId: a.buddyUserId,
+        assignmentType: a.primaryUserId === null ? 'unassigned' : a.buddyUserId ? 'buddy-pair' : 'primary',
+        primaryUserId: a.primaryUserId ?? null,
+        buddyUserId: a.buddyUserId ?? null,
         scheduleId,
       },
     })
   }
 
+  const assignedDays   = assignments.filter(a => a.primaryUserId !== null).length
+  const unassignedDays = totalDays - assignedDays
+
   return {
     assignments,
-    stats: { totalDays, assignedDays: assignments.length, unassignedDays: totalDays - assignments.length, userStats, warnings, score },
+    stats: { totalDays, assignedDays, unassignedDays, userStats, warnings, score },
   }
 }
 
