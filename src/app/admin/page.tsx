@@ -49,8 +49,8 @@ type ScheduleDetail = {
   id: string; name: string; startDate: string; endDate: string; status: string
   assignments: Array<{
     id: string; date: string; dayType: string
-    primaryUser: { name: string | null; email: string } | null
-    buddyUser: { name: string | null; email: string } | null
+    primaryUser: { id: string; name: string | null; email: string } | null
+    buddyUser: { id: string; name: string | null; email: string } | null
   }>
 }
 
@@ -92,6 +92,14 @@ export default function AdminPage() {
     setAvailableYears(data.availableYears || [])
     setCreditYear(data.currentYear || '')
   }
+
+  // Edit individual assignment modal
+  type EditingAssignment = {
+    id: string; date: string; dayType: string
+    primaryUserId: string; buddyUserId: string
+  }
+  const [editingAssignment, setEditingAssignment] = useState<EditingAssignment | null>(null)
+  const [savingAssignment, setSavingAssignment] = useState(false)
 
   // Edit faculty preferences modal
   const [editingUser, setEditingUser] = useState<User | null>(null)
@@ -296,6 +304,49 @@ export default function AdminPage() {
     const data = await res.json()
     setSelectedSchedule(data)
     setTab('view')
+  }
+
+  function openAssignmentEdit(a: ScheduleDetail['assignments'][number]) {
+    setEditingAssignment({
+      id: a.id,
+      date: a.date,
+      dayType: a.dayType,
+      primaryUserId: a.primaryUser?.id ?? '',
+      buddyUserId: a.buddyUser?.id ?? '',
+    })
+  }
+
+  async function saveAssignment() {
+    if (!editingAssignment || !selectedSchedule) return
+    setSavingAssignment(true)
+    try {
+      const res = await fetch(`/api/admin/schedule/${selectedSchedule.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          assignmentId: editingAssignment.id,
+          primaryUserId: editingAssignment.primaryUserId,
+          buddyUserId: editingAssignment.buddyUserId,
+        }),
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        // Patch the local schedule state so the table updates immediately
+        setSelectedSchedule(prev => prev ? {
+          ...prev,
+          assignments: prev.assignments.map(a =>
+            a.id === updated.id ? updated : a
+          ),
+        } : prev)
+        setEditingAssignment(null)
+        toast({ title: 'Assignment updated' })
+      } else {
+        const d = await res.json()
+        toast({ title: 'Save failed', description: d.error, variant: 'destructive' })
+      }
+    } finally {
+      setSavingAssignment(false)
+    }
   }
 
   async function toggleUserActive(userId: string, isActive: boolean) {
@@ -902,6 +953,7 @@ export default function AdminPage() {
                         <th className="text-left py-3 px-4 text-xs text-muted-foreground font-medium">Type</th>
                         <th className="text-left py-3 px-4 text-xs text-muted-foreground font-medium">Primary</th>
                         <th className="text-left py-3 px-4 text-xs text-muted-foreground font-medium">Buddy</th>
+                        <th className="py-3 px-4"></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -917,8 +969,25 @@ export default function AdminPage() {
                               {a.dayType}
                             </Badge>
                           </td>
-                          <td className="py-2.5 px-4">{a.primaryUser?.name || a.primaryUser?.email || '—'}</td>
-                          <td className="py-2.5 px-4 text-muted-foreground">{a.buddyUser?.name || a.buddyUser?.email || '—'}</td>
+                          <td className="py-2.5 px-4">
+                            {a.primaryUser?.name || a.primaryUser?.email || (
+                              <span className="text-red-400 italic text-xs">Unassigned</span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-4 text-muted-foreground">
+                            {a.buddyUser?.name || a.buddyUser?.email || '—'}
+                          </td>
+                          <td className="py-2.5 px-4">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                              onClick={() => openAssignmentEdit(a)}
+                            >
+                              <Pencil className="h-3 w-3" />
+                              Edit
+                            </Button>
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -929,6 +998,74 @@ export default function AdminPage() {
           </div>
         )}
       </main>
+
+      {/* Edit Assignment Modal */}
+      {editingAssignment && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+            <div className="flex items-center justify-between p-5 border-b">
+              <div>
+                <h2 className="text-lg font-bold">Edit Assignment</h2>
+                <p className="text-sm text-muted-foreground">
+                  {format(new Date(editingAssignment.date), 'EEEE, MMMM d, yyyy')}
+                  {' · '}
+                  <span className="capitalize">{editingAssignment.dayType}</span>
+                </p>
+              </div>
+              <button onClick={() => setEditingAssignment(null)} className="text-muted-foreground hover:text-foreground">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold block">Primary Physician</label>
+                <select
+                  className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={editingAssignment.primaryUserId}
+                  onChange={e => setEditingAssignment(a => a ? { ...a, primaryUserId: e.target.value } : a)}
+                >
+                  <option value="">— Unassigned —</option>
+                  {users.filter(u => u.isActive && u.profileComplete).map(u => (
+                    <option key={u.id} value={u.id}>
+                      {u.name || u.email} ({u.callType}, {u.fte.toFixed(1)} FTE)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold block">Buddy Physician</label>
+                <select
+                  className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={editingAssignment.buddyUserId}
+                  onChange={e => setEditingAssignment(a => a ? { ...a, buddyUserId: e.target.value } : a)}
+                >
+                  <option value="">— None —</option>
+                  {users.filter(u => u.isActive && u.profileComplete && u.id !== editingAssignment.primaryUserId).map(u => (
+                    <option key={u.id} value={u.id}>
+                      {u.name || u.email} ({u.callType}, {u.fte.toFixed(1)} FTE)
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground">Leave blank if no buddy is needed for this day.</p>
+              </div>
+
+              <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 text-xs text-amber-800">
+                Manual edits override the auto-assignment. Re-running auto-assign will overwrite these changes.
+              </div>
+            </div>
+
+            <div className="flex gap-3 p-5 border-t">
+              <Button className="flex-1" onClick={saveAssignment} disabled={savingAssignment}>
+                {savingAssignment && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save Changes
+              </Button>
+              <Button variant="outline" onClick={() => setEditingAssignment(null)}>Cancel</Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit Faculty Preferences Modal */}
       {editingUser && (

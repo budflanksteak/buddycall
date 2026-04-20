@@ -89,6 +89,7 @@ export default function ProfilePage() {
       fetch('/api/users/profile')
         .then(r => r.json())
         .then((data: Profile) => {
+          if (!data || (data as any).error) return
           if (data.callType) setCallType(data.callType)
           if (data.weekendPreference) setWeekendPreference(data.weekendPreference)
           if (data.holidayPreference) setHolidayPreference(data.holidayPreference)

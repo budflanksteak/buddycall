@@ -85,3 +85,38 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
   return NextResponse.json(schedule)
 }
+
+// PATCH — update a single assignment (primary or buddy)
+export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+  const session = await auth()
+  if (!session?.user?.id || session.user.role !== 'admin') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const body = await req.json()
+  const { assignmentId, primaryUserId, buddyUserId } = body
+
+  if (!assignmentId) {
+    return NextResponse.json({ error: 'assignmentId required' }, { status: 400 })
+  }
+
+  // Verify the assignment belongs to this schedule
+  const existing = await prisma.callAssignment.findUnique({ where: { id: assignmentId } })
+  if (!existing || existing.scheduleId !== params.id) {
+    return NextResponse.json({ error: 'Assignment not found' }, { status: 404 })
+  }
+
+  const updated = await prisma.callAssignment.update({
+    where: { id: assignmentId },
+    data: {
+      primaryUserId: primaryUserId === '' ? null : primaryUserId ?? existing.primaryUserId,
+      buddyUserId: buddyUserId === '' ? null : buddyUserId ?? existing.buddyUserId,
+    },
+    include: {
+      primaryUser: { select: { id: true, name: true, email: true } },
+      buddyUser:   { select: { id: true, name: true, email: true } },
+    },
+  })
+
+  return NextResponse.json(updated)
+}
