@@ -31,7 +31,7 @@ export async function POST(req: Request) {
       // Default password = last name (lowercase), padded to at least 6 chars
       const lastName = f.name.trim().split(' ').pop() || 'faculty'
       const base = lastName.toLowerCase()
-      const tempPassword = base.length < 6 ? base + '2026' : base
+      const tempPassword = base.length < 5 ? base + '2026' : base
       const hashed = await bcrypt.hash(tempPassword, 12)
 
       await prisma.user.create({
