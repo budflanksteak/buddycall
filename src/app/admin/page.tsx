@@ -614,8 +614,9 @@ export default function AdminPage() {
 
                 <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm text-blue-800">
                   Temporary passwords are each physician's <strong>last name in lowercase</strong>.
-                  For example, "Dr. Jane Smith" → password: <code className="bg-blue-100 px-1 rounded">smith</code>.
-                  Each physician should change their password after first login via their profile.
+                  For example, "Dr. Jane Smith" → <code className="bg-blue-100 px-1 rounded">smith</code>.
+                  Last names shorter than 6 characters are padded with <code className="bg-blue-100 px-1 rounded">2026</code> — e.g. "Dr. Amy Wu" → <code className="bg-blue-100 px-1 rounded">wu2026</code>.
+                  Each physician should change their password after first login using Forgot Password.
                 </div>
 
                 <Button className="w-full gap-2" onClick={importFaculty} disabled={importing}>
