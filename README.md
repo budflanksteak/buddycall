@@ -18,6 +18,9 @@ A full-stack web application for equitable Neuroradiology weekend and holiday ca
 - **XLSX export** — Schedule and faculty summary export with workload unit breakdown
 - **Password reset via email** — Gmail SMTP with app password
 - **Admin dashboard** — Manage faculty, set preferences on behalf of users, create/publish/delete schedules, view credit log
+- **StaffKey linking** — Each faculty record stores a `staffKey` (UUID) matching the corresponding record in the external qgenda MySQL staff database
+- **Qgenda History tab** — Admin view showing historic and future call assignments sourced directly from qgenda, with per-faculty counts of Primary and Buddy call days broken down by Saturday, Sunday, and Holiday
+- **Qgenda sync agent** — Standalone hourly Node.js agent (`qgenda-sync`) that polls the qgenda `liveschedule` MySQL table and writes call history to `QgendaLog` and No Call dates to `BlockedDate` in Supabase
 
 ---
 
@@ -32,6 +35,7 @@ A full-stack web application for equitable Neuroradiology weekend and holiday ca
 | UI | Tailwind CSS + Radix UI (shadcn/ui) |
 | Hosting | Vercel |
 | Email | Nodemailer + Gmail SMTP |
+| External schedule | qgenda MySQL (`liveschedule` table) via `qgenda-sync` agent |
 
 ---
 
@@ -133,6 +137,77 @@ npx prisma db push
 
 ---
 
+## Qgenda Integration
+
+BuddyCall integrates with the **qgenda** scheduling system via a standalone sync agent located in the `qgenda-sync/` directory (separate repository/folder from the main app).
+
+### StaffKey
+
+Each `User` record has a `staffKey` field (VARCHAR 36 UUID) that matches the corresponding `StaffKey` in the qgenda MySQL `liveradiologists` table. This is the join key used by the sync agent.
+
+### Qgenda Sync Agent
+
+The sync agent (`qgenda-sync/`) is a standalone Node.js process that runs independently of the Next.js app. It connects to both the qgenda MySQL database and Supabase directly.
+
+**What it syncs:**
+
+| TaskKey | TaskName | Action |
+|---|---|---|
+| `47952619-3c8d-4e58-a882-25e45b2d212d` | NEURO - Neuro Primary Call | Written to `QgendaLog` as `callType=primary` |
+| `a642828d-7ee7-4235-baf2-dcff66be7b85` | NEURO - Neuro Buddy Call | Written to `QgendaLog` as `callType=buddy` |
+| `f9063d6b-dcbd-4792-839a-59a19ade2a4f` | NEURO - No Call | Future dates written to `BlockedDate` |
+
+Only weekend days (`Weekday = 5 or 6`) and holidays (`Holiday = 1`) are synced.
+
+**Running the sync agent:**
+
+```bash
+cd qgenda-sync
+npm install
+cp .env.example .env
+# Edit .env with MySQL credentials and Supabase connection string
+node src/index.js
+```
+
+**Scheduling (Windows Task Scheduler):**
+
+```cmd
+schtasks /create /tn "QgendaSync" /tr "C:\path\to\qgenda-sync\run-sync.bat" /sc hourly /mo 1 /f
+```
+
+Logs are written to `qgenda-sync/logs/sync.log`.
+
+**Qgenda sync agent folder structure:**
+```
+qgenda-sync/
+├── .env                  ← MySQL + Supabase credentials (not committed)
+├── .env.example
+├── package.json
+├── run-sync.bat          ← Windows batch wrapper for Task Scheduler
+├── logs/
+│   └── sync.log
+├── prisma/
+│   └── schema.prisma     ← Supabase schema subset (User, QgendaLog, BlockedDate)
+└── src/
+    ├── index.js          ← Entry point
+    ├── mysql.js          ← MySQL connection
+    ├── supabase.js       ← Prisma/Supabase connection
+    └── sync.js           ← Core sync logic
+```
+
+### Qgenda History Tab
+
+In the admin dashboard, the **Qgenda History** tab shows a per-faculty summary table:
+
+| Column | Description |
+|---|---|
+| P·Sat / P·Sun / P·Hol | Historic Primary Call days on Saturdays, Sundays, Holidays |
+| B·Sat / B·Sun / B·Hol | Historic Buddy Call days on Saturdays, Sundays, Holidays |
+| Future | Upcoming assigned call dates not yet passed |
+| Last Sync | Timestamp of the most recent sync for that faculty member |
+
+---
+
 ## Scheduler Logic
 
 ### Phase 1 — Primary assignment
@@ -163,7 +238,7 @@ src/
 │   ├── profile/        # Faculty preference setup
 │   ├── calendar/       # Faculty blocked dates calendar
 │   └── api/
-│       ├── admin/      # Admin-only API routes
+│       ├── admin/      # Admin-only API routes (users, schedules, credits, qgenda-history)
 │       ├── auth/       # Registration, login, password reset
 │       └── users/      # Profile and blocked dates
 ├── lib/
