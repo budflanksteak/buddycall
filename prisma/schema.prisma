@@ -29,6 +29,9 @@ model User {
   // Profile complete flag
   profileComplete   Boolean   @default(false)
 
+  // Link to external MySQL staff database
+  staffKey          String?   @db.VarChar(36)
+
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -41,6 +44,7 @@ model User {
   resetTokens       PasswordResetToken[]
   verifyTokens      EmailVerificationToken[]
   creditLogs        CreditLog[]
+  qgendaLogs        QgendaLog[]
 }
 
 model Account {
@@ -143,6 +147,23 @@ model Holiday {
   name      String
   year      Int
   createdAt DateTime @default(now())
+}
+
+model QgendaLog {
+  id        String   @id @default(cuid())
+  userId    String
+  staffKey  String
+  date      DateTime
+  taskName  String
+  taskKey   String
+  callType  String   // "primary" | "buddy"
+  isWeekend Boolean  @default(false)
+  isHoliday Boolean  @default(false)
+  syncedAt  DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date, taskKey])
 }
 
 model PasswordResetToken {

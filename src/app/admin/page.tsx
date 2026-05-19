@@ -60,7 +60,14 @@ type CreditEntry = {
   primaryDays: number; buddyDays: number; holidayDays: number; workloadUnits: number
   user: { name: string | null; email: string; callType: string | null; fte: number }
 }
-type TabType = 'faculty' | 'import' | 'schedules' | 'create' | 'view' | 'credits'
+type TabType = 'faculty' | 'import' | 'schedules' | 'create' | 'view' | 'credits' | 'qgenda'
+
+type QgendaSummaryEntry = {
+  userId: string; name: string | null; email: string; callType: string | null
+  primarySat: number; primarySun: number; primaryHoliday: number
+  buddySat: number; buddySun: number; buddyHoliday: number
+  futureAssigned: number; lastSynced: string | null
+}
 
 export default function AdminPage() {
   const { data: session, status } = useSession()
@@ -83,6 +90,22 @@ export default function AdminPage() {
   const [credits, setCredits] = useState<CreditEntry[]>([])
   const [creditYear, setCreditYear] = useState('')
   const [availableYears, setAvailableYears] = useState<string[]>([])
+
+  // Qgenda history
+  const [qgendaSummary, setQgendaSummary] = useState<QgendaSummaryEntry[]>([])
+  const [qgendaLoading, setQgendaLoading] = useState(false)
+  const [qgendaExpanded, setQgendaExpanded] = useState<string | null>(null)
+
+  async function loadQgendaHistory() {
+    setQgendaLoading(true)
+    try {
+      const res = await fetch('/api/admin/qgenda-history')
+      const data = await res.json()
+      setQgendaSummary(data.summary || [])
+    } finally {
+      setQgendaLoading(false)
+    }
+  }
 
   async function loadCredits(year?: string) {
     const url = year ? `/api/admin/credits?year=${year}` : '/api/admin/credits'
@@ -428,10 +451,11 @@ export default function AdminPage() {
             ['schedules', 'Schedules', Calendar],
             ['create', 'Create Schedule', Play],
             ['credits', 'Credit Log', BookOpen],
+            ['qgenda', 'Qgenda History', TrendingUp],
           ] as [TabType, string, any][]).map(([id, label, Icon]) => (
             <button
               key={id}
-              onClick={() => { setTab(id); if (id === 'credits') loadCredits() }}
+              onClick={() => { setTab(id); if (id === 'credits') loadCredits(); if (id === 'qgenda') loadQgendaHistory() }}
               className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
                 tab === id
                   ? 'border-blue-600 text-blue-600'
@@ -915,6 +939,98 @@ export default function AdminPage() {
                       </table>
                     </div>
                   </>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* QGENDA HISTORY TAB */}
+        {tab === 'qgenda' && (
+          <div className="space-y-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <div>
+                  <CardTitle className="text-base">Qgenda Call History</CardTitle>
+                  <CardDescription>Historic and future call assignments sourced from qgenda liveschedule</CardDescription>
+                </div>
+                <Button variant="outline" size="sm" onClick={loadQgendaHistory} disabled={qgendaLoading} className="gap-2">
+                  {qgendaLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                  Refresh
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {qgendaLoading ? (
+                  <div className="flex items-center justify-center py-12 text-muted-foreground gap-2">
+                    <Loader2 className="h-5 w-5 animate-spin" /> Loading…
+                  </div>
+                ) : qgendaSummary.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <TrendingUp className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                    <p className="font-medium">No qgenda data yet</p>
+                    <p className="text-sm mt-1">Run the qgenda-sync agent to populate this table.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b text-muted-foreground text-xs">
+                          <th className="text-left py-2 pr-4">Faculty</th>
+                          <th className="text-left py-2 pr-4">Type</th>
+                          <th className="text-center py-2 pr-2 text-blue-700">P·Sat</th>
+                          <th className="text-center py-2 pr-2 text-blue-700">P·Sun</th>
+                          <th className="text-center py-2 pr-4 text-blue-700">P·Hol</th>
+                          <th className="text-center py-2 pr-2 text-green-700">B·Sat</th>
+                          <th className="text-center py-2 pr-2 text-green-700">B·Sun</th>
+                          <th className="text-center py-2 pr-4 text-green-700">B·Hol</th>
+                          <th className="text-center py-2 pr-4 text-amber-700">Future</th>
+                          <th className="text-left py-2">Last Sync</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {qgendaSummary.map(row => (
+                          <tr
+                            key={row.userId}
+                            className="border-b last:border-0 hover:bg-gray-50 cursor-pointer"
+                            onClick={() => setQgendaExpanded(qgendaExpanded === row.userId ? null : row.userId)}
+                          >
+                            <td className="py-2.5 pr-4 font-medium">{row.name || row.email}</td>
+                            <td className="py-2.5 pr-4">
+                              <Badge variant={row.callType === 'buddy' ? 'info' : 'secondary'} className="capitalize text-xs">
+                                {row.callType || '—'}
+                              </Badge>
+                            </td>
+                            <td className="py-2.5 pr-2 text-center text-blue-700">{row.primarySat}</td>
+                            <td className="py-2.5 pr-2 text-center text-blue-700">{row.primarySun}</td>
+                            <td className="py-2.5 pr-4 text-center text-blue-700">{row.primaryHoliday}</td>
+                            <td className="py-2.5 pr-2 text-center text-green-700">{row.buddySat}</td>
+                            <td className="py-2.5 pr-2 text-center text-green-700">{row.buddySun}</td>
+                            <td className="py-2.5 pr-4 text-center text-green-700">{row.buddyHoliday}</td>
+                            <td className="py-2.5 pr-4 text-center text-amber-700">{row.futureAssigned}</td>
+                            <td className="py-2.5 text-xs text-muted-foreground">
+                              {row.lastSynced ? format(new Date(row.lastSynced), 'MM/dd/yy HH:mm') : '—'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="border-t font-semibold text-xs bg-gray-50">
+                          <td className="py-2 pr-4" colSpan={2}>Totals</td>
+                          <td className="py-2 pr-2 text-center text-blue-700">{qgendaSummary.reduce((s, r) => s + r.primarySat, 0)}</td>
+                          <td className="py-2 pr-2 text-center text-blue-700">{qgendaSummary.reduce((s, r) => s + r.primarySun, 0)}</td>
+                          <td className="py-2 pr-4 text-center text-blue-700">{qgendaSummary.reduce((s, r) => s + r.primaryHoliday, 0)}</td>
+                          <td className="py-2 pr-2 text-center text-green-700">{qgendaSummary.reduce((s, r) => s + r.buddySat, 0)}</td>
+                          <td className="py-2 pr-2 text-center text-green-700">{qgendaSummary.reduce((s, r) => s + r.buddySun, 0)}</td>
+                          <td className="py-2 pr-4 text-center text-green-700">{qgendaSummary.reduce((s, r) => s + r.buddyHoliday, 0)}</td>
+                          <td className="py-2 pr-4 text-center text-amber-700">{qgendaSummary.reduce((s, r) => s + r.futureAssigned, 0)}</td>
+                          <td />
+                        </tr>
+                      </tfoot>
+                    </table>
+                    <p className="text-xs text-muted-foreground mt-3">
+                      P = Primary Call · B = Buddy Call · Sat/Sun = weekend days · Hol = holidays · Future = upcoming assigned dates
+                    </p>
+                  </div>
                 )}
               </CardContent>
             </Card>
