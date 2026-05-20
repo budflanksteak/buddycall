@@ -69,6 +69,11 @@ type QgendaSummaryEntry = {
   futureAssigned: number; lastSynced: string | null
 }
 
+type QgendaLogEntry = {
+  id: string; userId: string; date: string; taskName: string
+  callType: string; isWeekend: boolean; isHoliday: boolean; syncedAt: string
+}
+
 export default function AdminPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
@@ -93,6 +98,7 @@ export default function AdminPage() {
 
   // Qgenda history
   const [qgendaSummary, setQgendaSummary] = useState<QgendaSummaryEntry[]>([])
+  const [qgendaLogs, setQgendaLogs] = useState<QgendaLogEntry[]>([])
   const [qgendaLoading, setQgendaLoading] = useState(false)
   const [qgendaExpanded, setQgendaExpanded] = useState<string | null>(null)
 
@@ -102,6 +108,7 @@ export default function AdminPage() {
       const res = await fetch('/api/admin/qgenda-history')
       const data = await res.json()
       setQgendaSummary(data.summary || [])
+      setQgendaLogs(data.logs || [])
     } finally {
       setQgendaLoading(false)
     }
@@ -985,14 +992,22 @@ export default function AdminPage() {
                           <th className="text-center py-2 pr-4 text-green-700">B·Hol</th>
                           <th className="text-center py-2 pr-4 text-amber-700">Future</th>
                           <th className="text-left py-2">Last Sync</th>
+                          <th className="py-2 w-6"></th>
                         </tr>
                       </thead>
                       <tbody>
-                        {qgendaSummary.map(row => (
+                        {qgendaSummary.map(row => {
+                          const isExpanded = qgendaExpanded === row.userId
+                          const userLogs = qgendaLogs
+                            .filter(l => l.userId === row.userId)
+                            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                          const today = new Date(); today.setHours(0,0,0,0)
+                          return (
+                          <>
                           <tr
                             key={row.userId}
-                            className="border-b last:border-0 hover:bg-gray-50 cursor-pointer"
-                            onClick={() => setQgendaExpanded(qgendaExpanded === row.userId ? null : row.userId)}
+                            className={`border-b cursor-pointer transition-colors ${isExpanded ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                            onClick={() => setQgendaExpanded(isExpanded ? null : row.userId)}
                           >
                             <td className="py-2.5 pr-4 font-medium">{row.name || row.email}</td>
                             <td className="py-2.5 pr-4">
@@ -1010,8 +1025,73 @@ export default function AdminPage() {
                             <td className="py-2.5 text-xs text-muted-foreground">
                               {row.lastSynced ? format(new Date(row.lastSynced), 'MM/dd/yy HH:mm') : '—'}
                             </td>
+                            <td className="py-2.5 text-muted-foreground">
+                              {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                            </td>
                           </tr>
-                        ))}
+                          {isExpanded && (
+                            <tr key={`${row.userId}-detail`} className="border-b bg-blue-50/60">
+                              <td colSpan={11} className="px-4 py-3">
+                                {userLogs.length === 0 ? (
+                                  <p className="text-sm text-muted-foreground italic">No individual assignments found for this faculty member.</p>
+                                ) : (
+                                  <div className="rounded-lg border border-blue-100 overflow-hidden">
+                                    <table className="w-full text-xs">
+                                      <thead className="bg-blue-100/60">
+                                        <tr className="text-muted-foreground">
+                                          <th className="text-left py-2 px-3 font-medium">Date</th>
+                                          <th className="text-left py-2 px-3 font-medium">Day</th>
+                                          <th className="text-left py-2 px-3 font-medium">Assignment</th>
+                                          <th className="text-left py-2 px-3 font-medium">Flags</th>
+                                          <th className="text-left py-2 px-3 font-medium">Task</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="bg-white">
+                                        {userLogs.map(log => {
+                                          const d = new Date(log.date)
+                                          const isFuture = d >= today
+                                          return (
+                                            <tr key={log.id} className={`border-t border-blue-50 ${isFuture ? 'bg-amber-50/40' : ''}`}>
+                                              <td className="py-1.5 px-3 font-medium">{format(d, 'MM/dd/yyyy')}</td>
+                                              <td className="py-1.5 px-3 text-muted-foreground">{format(d, 'EEE')}</td>
+                                              <td className="py-1.5 px-3">
+                                                <Badge
+                                                  variant={log.callType === 'primary' ? 'info' : 'secondary'}
+                                                  className="capitalize text-xs"
+                                                >
+                                                  {log.callType}
+                                                </Badge>
+                                              </td>
+                                              <td className="py-1.5 px-3">
+                                                <div className="flex gap-1">
+                                                  {log.isHoliday && (
+                                                    <Badge variant="warning" className="text-xs">Holiday</Badge>
+                                                  )}
+                                                  {log.isWeekend && !log.isHoliday && (
+                                                    <Badge variant="outline" className="text-xs">{format(d, 'EEE')}</Badge>
+                                                  )}
+                                                  {isFuture && (
+                                                    <Badge variant="outline" className="text-xs text-amber-700 border-amber-300">Upcoming</Badge>
+                                                  )}
+                                                </div>
+                                              </td>
+                                              <td className="py-1.5 px-3 text-muted-foreground truncate max-w-[200px]">{log.taskName}</td>
+                                            </tr>
+                                          )
+                                        })}
+                                      </tbody>
+                                    </table>
+                                    <div className="px-3 py-2 bg-blue-50/60 text-xs text-muted-foreground border-t border-blue-100">
+                                      {userLogs.length} total assignment{userLogs.length !== 1 ? 's' : ''} · {userLogs.filter(l => new Date(l.date) < today).length} past · {userLogs.filter(l => new Date(l.date) >= today).length} upcoming
+                                    </div>
+                                  </div>
+                                )}
+                              </td>
+                            </tr>
+                          )}
+                          </>
+                        )})}
+
                       </tbody>
                       <tfoot>
                         <tr className="border-t font-semibold text-xs bg-gray-50">
