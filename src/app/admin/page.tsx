@@ -965,10 +965,18 @@ export default function AdminPage() {
                     <CardTitle className="text-base">Qgenda Call History</CardTitle>
                     <CardDescription>Historic and future call assignments sourced from qgenda liveschedule</CardDescription>
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => loadQgendaHistory()} disabled={qgendaLoading} className="gap-2">
-                    {qgendaLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                    Refresh
-                  </Button>
+                  <div className="flex gap-2">
+                    <a href={`/api/admin/qgenda-history?fromYear=${qgendaFromYear}&export=xlsx`} download>
+                      <Button variant="outline" size="sm" className="gap-2">
+                        <Download className="h-4 w-4" />
+                        Download XLSX
+                      </Button>
+                    </a>
+                    <Button variant="outline" size="sm" onClick={() => loadQgendaHistory()} disabled={qgendaLoading} className="gap-2">
+                      {qgendaLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                      Refresh
+                    </Button>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap pt-1">
                   <span className="text-xs text-muted-foreground font-medium">Lookback from:</span>
