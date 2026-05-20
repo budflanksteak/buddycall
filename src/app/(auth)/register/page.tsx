@@ -76,7 +76,7 @@ export default function RegisterPage() {
               <Brain className="h-10 w-10 text-white" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-blue-900">Neurorad AutoPilot</h1>
+          <h1 className="text-3xl font-bold text-blue-900">Neurorad Call Autopilot</h1>
           <p className="text-muted-foreground mt-1">Create your account</p>
         </div>
 

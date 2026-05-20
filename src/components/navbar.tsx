@@ -31,7 +31,7 @@ export function Navbar() {
           {/* Logo */}
           <Link href="/dashboard" className="flex items-center gap-2">
             <Brain className="h-7 w-7 text-blue-600" />
-            <span className="font-bold text-xl text-blue-900">Neurorad AutoPilot</span>
+            <span className="font-bold text-xl text-blue-900">Neurorad Call Autopilot</span>
           </Link>
 
           {/* Nav links */}

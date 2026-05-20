@@ -60,7 +60,7 @@ export default function VerifyEmailPage() {
               <Brain className="h-10 w-10 text-white" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold text-blue-900">Neurorad AutoPilot</h1>
+          <h1 className="text-3xl font-bold text-blue-900">Neurorad Call Autopilot</h1>
         </div>
         <Suspense fallback={<div className="text-center">Loading...</div>}>
           <VerifyContent />

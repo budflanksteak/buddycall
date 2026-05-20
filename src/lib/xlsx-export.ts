@@ -30,7 +30,7 @@ export function generateScheduleXLSX(
 
   // ── Sheet 1: Schedule ──────────────────────────────────────────────────────
   const scheduleData = [
-    ['Neurorad AutoPilot — Call Schedule'],
+    ['Neurorad Call Autopilot — Call Schedule'],
     [`${scheduleName}  |  ${startDate} to ${endDate}`],
     [],
     ['Date', 'Day', 'Type', 'Primary Physician', 'Buddy Physician'],
@@ -57,7 +57,7 @@ export function generateScheduleXLSX(
   const totalDays = assignments.length
 
   const summaryData = [
-    ['Neurorad AutoPilot — Faculty Call Summary'],
+    ['Neurorad Call Autopilot — Faculty Call Summary'],
     [`${scheduleName}  |  ${startDate} to ${endDate}`],
     [],
     [
@@ -115,7 +115,7 @@ export function generateScheduleXLSX(
 
   if (holidayRows.length > 0) {
     const holData = [
-      ['Neurorad AutoPilot — Holiday Assignments'],
+      ['Neurorad Call Autopilot — Holiday Assignments'],
       [`${scheduleName}  |  ${startDate} to ${endDate}`],
       [],
       ['Date', 'Day', 'Primary Physician', 'Buddy Physician'],

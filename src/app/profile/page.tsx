@@ -145,7 +145,7 @@ export default function ProfilePage() {
       <main className="max-w-2xl mx-auto px-4 py-8">
         {isFirstSetup && (
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-blue-900">Welcome to Neurorad AutoPilot</h1>
+            <h1 className="text-2xl font-bold text-blue-900">Welcome to Neurorad Call Autopilot</h1>
             <p className="text-muted-foreground mt-2">
               Please complete your profile to get started. This helps us build an equitable call schedule.
             </p>
