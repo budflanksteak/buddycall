@@ -8,11 +8,16 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const url    = new URL(req.url)
-  const userId = url.searchParams.get('userId') ?? undefined
+  const url      = new URL(req.url)
+  const userId   = url.searchParams.get('userId') ?? undefined
+  const fromYear = parseInt(url.searchParams.get('fromYear') ?? '2019', 10)
+  const fromDate = new Date(fromYear, 0, 1) // Jan 1 of fromYear
 
   const logs = await prisma.qgendaLog.findMany({
-    where: userId ? { userId } : {},
+    where: {
+      ...(userId ? { userId } : {}),
+      date: { gte: fromDate },
+    },
     include: {
       user: { select: { name: true, email: true } },
     },
@@ -24,6 +29,7 @@ export async function GET(req: Request) {
     select: {
       id: true, name: true, email: true, callType: true,
       qgendaLogs: {
+        where: { date: { gte: fromDate } },
         select: { callType: true, date: true, isWeekend: true, isHoliday: true, syncedAt: true }
       },
     },

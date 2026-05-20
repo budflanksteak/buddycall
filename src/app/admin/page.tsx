@@ -101,11 +101,14 @@ export default function AdminPage() {
   const [qgendaLogs, setQgendaLogs] = useState<QgendaLogEntry[]>([])
   const [qgendaLoading, setQgendaLoading] = useState(false)
   const [qgendaExpanded, setQgendaExpanded] = useState<string | null>(null)
+  const [qgendaFromYear, setQgendaFromYear] = useState(2019)
+  const currentYear = new Date().getFullYear()
+  const qgendaYears = Array.from({ length: currentYear - 2018 }, (_, i) => 2019 + i)
 
-  async function loadQgendaHistory() {
+  async function loadQgendaHistory(fromYear = qgendaFromYear) {
     setQgendaLoading(true)
     try {
-      const res = await fetch('/api/admin/qgenda-history')
+      const res = await fetch(`/api/admin/qgenda-history?fromYear=${fromYear}`)
       const data = await res.json()
       setQgendaSummary(data.summary || [])
       setQgendaLogs(data.logs || [])
@@ -956,15 +959,35 @@ export default function AdminPage() {
         {tab === 'qgenda' && (
           <div className="space-y-4">
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-3">
-                <div>
-                  <CardTitle className="text-base">Qgenda Call History</CardTitle>
-                  <CardDescription>Historic and future call assignments sourced from qgenda liveschedule</CardDescription>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div>
+                    <CardTitle className="text-base">Qgenda Call History</CardTitle>
+                    <CardDescription>Historic and future call assignments sourced from qgenda liveschedule</CardDescription>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => loadQgendaHistory()} disabled={qgendaLoading} className="gap-2">
+                    {qgendaLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                    Refresh
+                  </Button>
                 </div>
-                <Button variant="outline" size="sm" onClick={loadQgendaHistory} disabled={qgendaLoading} className="gap-2">
-                  {qgendaLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                  Refresh
-                </Button>
+                <div className="flex items-center gap-2 flex-wrap pt-1">
+                  <span className="text-xs text-muted-foreground font-medium">Lookback from:</span>
+                  {qgendaYears.map(y => (
+                    <Button
+                      key={y}
+                      size="sm"
+                      variant={qgendaFromYear === y ? 'default' : 'outline'}
+                      className="h-7 px-2.5 text-xs"
+                      onClick={() => {
+                        setQgendaFromYear(y)
+                        setQgendaExpanded(null)
+                        loadQgendaHistory(y)
+                      }}
+                    >
+                      {y}
+                    </Button>
+                  ))}
+                </div>
               </CardHeader>
               <CardContent>
                 {qgendaLoading ? (
