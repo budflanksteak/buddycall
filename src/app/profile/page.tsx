@@ -227,10 +227,10 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
-          {/* FTE */}
+          {/* cFTE */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">FTE (Full-Time Equivalent)</CardTitle>
+              <CardTitle className="text-lg">cFTE (Clinical Full-Time Equivalent)</CardTitle>
               <CardDescription>
                 Part-time faculty receive proportionally fewer call assignments. 1.0 = full-time, 0.5 = half-time.
               </CardDescription>
@@ -248,7 +248,7 @@ export default function ProfilePage() {
                 />
                 <div className="text-center">
                   <span className="text-2xl font-bold text-blue-600">{fte.toFixed(1)}</span>
-                  <p className="text-xs text-muted-foreground">FTE</p>
+                  <p className="text-xs text-muted-foreground">cFTE</p>
                 </div>
               </div>
               <div className="flex justify-between text-xs text-muted-foreground">
@@ -258,7 +258,7 @@ export default function ProfilePage() {
               </div>
               {fte < 1.0 && (
                 <p className="text-sm text-blue-700 bg-blue-50 rounded p-2">
-                  At {(fte * 100).toFixed(0)}% FTE, you'll be assigned approximately {(fte * 100).toFixed(0)}% of a full-time faculty member's call.
+                  At {(fte * 100).toFixed(0)}% cFTE, you'll be assigned approximately {(fte * 100).toFixed(0)}% of a full-time faculty member's call.
                 </p>
               )}
             </CardContent>

@@ -128,7 +128,7 @@ export async function autoAssignSchedule(
   const totalFTE = users.reduce((s, u) => s + u.fte, 0)
 
   // Per-user primary target for this period only
-  // Every faculty member (loner and buddy) shares primary equally by FTE
+  // Every faculty member (loner and buddy) shares primary equally by cFTE
   const primaryTarget = new Map<string, number>()
   users.forEach(u => primaryTarget.set(u.id, (u.fte / totalFTE) * totalDays))
 

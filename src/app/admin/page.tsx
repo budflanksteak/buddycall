@@ -509,7 +509,7 @@ export default function AdminPage() {
                       <tr className="border-b text-muted-foreground text-xs">
                         <th className="text-left py-2 pr-4">Name</th>
                         <th className="text-left py-2 pr-4">Type</th>
-                        <th className="text-left py-2 pr-4">FTE</th>
+                        <th className="text-left py-2 pr-4">cFTE</th>
                         <th className="text-left py-2 pr-4">Assignments</th>
                         <th className="text-left py-2 pr-4">Status</th>
                         <th className="text-left py-2">Actions</th>
@@ -846,7 +846,7 @@ export default function AdminPage() {
                     <li>Identify all weekend days and federal holidays in the range</li>
                     <li>Respect each faculty member's blocked dates</li>
                     <li>Pair buddy physicians with partners</li>
-                    <li>Balance assignments proportionally by FTE</li>
+                    <li>Balance assignments proportionally by cFTE</li>
                     <li>Apply spacing preferences where possible</li>
                   </ul>
                 </div>
@@ -918,12 +918,12 @@ export default function AdminPage() {
                           <tr className="border-b text-xs text-muted-foreground">
                             <th className="text-left py-2 pr-4">Physician</th>
                             <th className="text-left py-2 pr-4">Type</th>
-                            <th className="text-left py-2 pr-4">FTE</th>
+                            <th className="text-left py-2 pr-4">cFTE</th>
                             <th className="text-center py-2 pr-4">Primary Days</th>
                             <th className="text-center py-2 pr-4">Buddy Days</th>
                             <th className="text-center py-2 pr-4">Holidays</th>
                             <th className="text-center py-2 pr-4">Workload Units</th>
-                            <th className="text-center py-2">Units/FTE</th>
+                            <th className="text-center py-2">Units/cFTE</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1281,7 +1281,7 @@ export default function AdminPage() {
                   <option value="">— Unassigned —</option>
                   {users.filter(u => u.isActive && u.profileComplete).map(u => (
                     <option key={u.id} value={u.id}>
-                      {u.name || u.email} ({u.callType}, {u.fte.toFixed(1)} FTE)
+                      {u.name || u.email} ({u.callType}, {u.fte.toFixed(1)} cFTE)
                     </option>
                   ))}
                 </select>
@@ -1297,7 +1297,7 @@ export default function AdminPage() {
                   <option value="">— None —</option>
                   {users.filter(u => u.isActive && u.profileComplete && u.id !== editingAssignment.primaryUserId).map(u => (
                     <option key={u.id} value={u.id}>
-                      {u.name || u.email} ({u.callType}, {u.fte.toFixed(1)} FTE)
+                      {u.name || u.email} ({u.callType}, {u.fte.toFixed(1)} cFTE)
                     </option>
                   ))}
                 </select>
@@ -1377,9 +1377,9 @@ export default function AdminPage() {
                 </div>
               </div>
 
-              {/* FTE */}
+              {/* cFTE */}
               <div>
-                <p className="text-sm font-semibold mb-2">FTE: <span className="text-blue-600">{editForm.fte.toFixed(1)}</span></p>
+                <p className="text-sm font-semibold mb-2">cFTE: <span className="text-blue-600">{editForm.fte.toFixed(1)}</span></p>
                 <input type="range" min="0.1" max="1.0" step="0.1" value={editForm.fte}
                   onChange={e => setEditForm(f => ({ ...f, fte: parseFloat(e.target.value) }))}
                   className="w-full h-2 accent-blue-600" />
@@ -1479,7 +1479,7 @@ function ResultCard({ result }: { result: AssignmentResult }) {
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div className="bg-blue-50 border border-blue-100 rounded p-2">
               <p className="font-semibold text-blue-800 mb-0.5">Equity Score = Primary Day Balance</p>
-              <p className="text-blue-700">Every faculty member (loner &amp; buddy) targets the same number of primary call days proportional to FTE. Score penalises deviation from that target.</p>
+              <p className="text-blue-700">Every faculty member (loner &amp; buddy) targets the same number of primary call days proportional to cFTE. Score penalises deviation from that target.</p>
             </div>
             <div className="bg-slate-50 border border-slate-100 rounded p-2">
               <p className="font-semibold text-slate-800 mb-0.5">Workload Units (credit log only)</p>

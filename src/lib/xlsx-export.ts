@@ -61,7 +61,7 @@ export function generateScheduleXLSX(
     [`${scheduleName}  |  ${startDate} to ${endDate}`],
     [],
     [
-      'Physician', 'Email', 'Call Type', 'FTE',
+      'Physician', 'Email', 'Call Type', 'cFTE',
       'Primary Days', 'Target Primary', 'Buddy Days',
       'Holidays', 'Total Days', 'Workload Units',
       'Note',
