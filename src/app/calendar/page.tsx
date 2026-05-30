@@ -13,11 +13,12 @@ import {
   format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth,
   isToday, isSameDay, addMonths, subMonths, isSaturday, isSunday, addDays,
 } from 'date-fns'
-import { ChevronLeft, ChevronRight, X, Trash2, Loader2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, X, Trash2, Loader2, Users } from 'lucide-react'
 import { getFederalHolidays } from '@/lib/utils'
 
 type BlockedDate = { id: string; date: string; reason?: string }
 type Assignment = { id: string; date: string; dayType: string; assignmentType: string; primaryUserId: string }
+type FacultyUser = { id: string; name: string | null; email: string }
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -34,21 +35,40 @@ export default function CalendarPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
+  // Admin view-as
+  const [facultyList, setFacultyList] = useState<FacultyUser[]>([])
+  const [viewingUserId, setViewingUserId] = useState<string | null>(null)
+
+  const isAdmin = session?.user?.role === 'admin'
+  const effectiveUserId = viewingUserId || session?.user?.id || ''
+  const viewingUser = facultyList.find(f => f.id === viewingUserId)
+
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/login')
   }, [status, router])
 
-  const loadData = useCallback(async () => {
+  // Load faculty list for admin
+  useEffect(() => {
+    if (isAdmin) {
+      fetch('/api/admin/users')
+        .then(r => r.json())
+        .then(data => setFacultyList(Array.isArray(data) ? data : []))
+    }
+  }, [isAdmin])
+
+  const loadData = useCallback(async (userId?: string) => {
+    const targetId = userId ?? effectiveUserId
+    const userParam = isAdmin && targetId ? `?userId=${targetId}` : ''
     const [blockedRes, assignRes] = await Promise.all([
-      fetch('/api/blocked-dates'),
-      fetch('/api/schedule'),
+      fetch(`/api/blocked-dates${userParam}`),
+      fetch(`/api/schedule${userParam}`),
     ])
     const blocked = await blockedRes.json()
     const assign = await assignRes.json()
     setBlockedDates(Array.isArray(blocked) ? blocked : [])
     setAssignments(Array.isArray(assign) ? assign : [])
     setLoading(false)
-  }, [])
+  }, [effectiveUserId, isAdmin])
 
   useEffect(() => {
     if (status === 'authenticated') loadData()
@@ -96,10 +116,11 @@ export default function CalendarPage() {
         body: JSON.stringify({
           dates: selected.map(d => format(d, 'yyyy-MM-dd')),
           reason: reason || undefined,
+          ...(isAdmin && viewingUserId ? { userId: viewingUserId } : {}),
         }),
       })
       if (res.ok) {
-        toast({ title: `${selected.length} date(s) blocked`, variant: 'success' as any })
+        toast({ title: `${selected.length} date(s) blocked` })
         setSelected([])
         setReason('')
         await loadData()
@@ -113,7 +134,10 @@ export default function CalendarPage() {
     const res = await fetch('/api/blocked-dates', {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dates: [dateStr] }),
+      body: JSON.stringify({
+        dates: [dateStr],
+        ...(isAdmin && viewingUserId ? { userId: viewingUserId } : {}),
+      }),
     })
     if (res.ok) {
       toast({ title: 'Date unblocked' })
@@ -161,10 +185,52 @@ export default function CalendarPage() {
       <Navbar />
       <main className="max-w-5xl mx-auto px-4 py-8">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">My Availability Calendar</h1>
-          <p className="text-muted-foreground mt-1">
-            Block out weekends and holidays when you are unavailable. These are saved permanently.
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {viewingUser ? `${viewingUser.name || viewingUser.email}'s Calendar` : 'My Availability Calendar'}
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                {viewingUser
+                  ? `Viewing and editing blocked dates for ${viewingUser.name || viewingUser.email}`
+                  : 'Block out weekends and holidays when you are unavailable. These are saved permanently.'}
+              </p>
+            </div>
+
+            {/* Admin faculty selector */}
+            {isAdmin && (
+              <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                <Users className="h-4 w-4 text-blue-600 shrink-0" />
+                <select
+                  className="text-sm bg-transparent border-none outline-none text-blue-800 font-medium cursor-pointer"
+                  value={viewingUserId || ''}
+                  onChange={e => {
+                    const id = e.target.value || null
+                    setViewingUserId(id)
+                    setSelected([])
+                    setLoading(true)
+                    loadData(id || session?.user?.id || '')
+                  }}
+                >
+                  <option value="">My Calendar</option>
+                  <optgroup label="View as Faculty">
+                    {facultyList.map(f => (
+                      <option key={f.id} value={f.id}>
+                        {f.name || f.email}
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
+              </div>
+            )}
+          </div>
+
+          {viewingUser && (
+            <div className="mt-3 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm text-amber-800 flex items-center gap-2">
+              <Users className="h-4 w-4 shrink-0" />
+              You are editing <strong>{viewingUser.name || viewingUser.email}</strong>'s calendar as admin. Changes take effect immediately.
+            </div>
+          )}
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
