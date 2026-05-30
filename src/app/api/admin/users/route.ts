@@ -21,6 +21,7 @@ export async function GET() {
       spacingPreference: true,
       profileComplete: true,
       isActive: true,
+      isSuperuser: true,
       createdAt: true,
       _count: {
         select: {
@@ -44,6 +45,12 @@ export async function PUT(req: Request) {
   try {
     const { userId, isActive, role } = await req.json()
     if (!userId) return NextResponse.json({ error: 'userId required' }, { status: 400 })
+
+    // Superusers cannot be modified by anyone
+    const target = await prisma.user.findUnique({ where: { id: userId }, select: { isSuperuser: true } })
+    if (target?.isSuperuser) {
+      return NextResponse.json({ error: 'Superuser accounts cannot be modified' }, { status: 403 })
+    }
 
     const data: any = {}
     if (isActive !== undefined) data.isActive = isActive

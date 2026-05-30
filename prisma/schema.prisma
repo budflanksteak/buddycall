@@ -25,6 +25,7 @@ model User {
   spacingPreference String?   // "maximize" | "no-preference"
   blockedHolidays   String    @default("[]") // JSON array of holiday names always blocked
   isActive          Boolean   @default(true)
+  isSuperuser       Boolean   @default(false) // protected from modification by other admins
 
   // Profile complete flag
   profileComplete   Boolean   @default(false)

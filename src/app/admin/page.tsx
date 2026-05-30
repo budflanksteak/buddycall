@@ -26,6 +26,7 @@ type User = {
   id: string; name: string | null; email: string; role: string
   callType: string | null; weekendPreference: string | null; holidayPreference: string | null
   fte: number; spacingPreference: string | null; profileComplete: boolean; isActive: boolean
+  isSuperuser: boolean
   _count: { primaryAssignments: number; buddyAssignments: number }
 }
 
@@ -538,11 +539,12 @@ export default function AdminPage() {
                             <span className="text-green-600">{u._count.buddyAssignments}B</span>
                           </td>
                           <td className="py-2.5 pr-4">
-                            <div className="flex gap-1">
+                            <div className="flex gap-1 flex-wrap">
                               <Badge variant={u.isActive ? 'success' : 'outline'}>
                                 {u.isActive ? 'Active' : 'Inactive'}
                               </Badge>
                               {u.role === 'admin' && <Badge variant="info">Admin</Badge>}
+                              {u.isSuperuser && <Badge variant="info" className="bg-purple-100 text-purple-800 border-purple-200">Superuser</Badge>}
                               {!u.profileComplete && <Badge variant="warning">No profile</Badge>}
                             </div>
                           </td>
@@ -557,15 +559,17 @@ export default function AdminPage() {
                                 <Pencil className="h-3 w-3" />
                                 Edit Prefs
                               </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="text-xs h-7"
-                                onClick={() => toggleUserActive(u.id, !u.isActive)}
-                              >
-                                {u.isActive ? 'Deactivate' : 'Activate'}
-                              </Button>
-                              {u.id !== session?.user.id && (
+                              {!u.isSuperuser && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-xs h-7"
+                                  onClick={() => toggleUserActive(u.id, !u.isActive)}
+                                >
+                                  {u.isActive ? 'Deactivate' : 'Activate'}
+                                </Button>
+                              )}
+                              {!u.isSuperuser && u.id !== session?.user.id && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
