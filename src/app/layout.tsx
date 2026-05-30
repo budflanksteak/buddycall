@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'Neurorad Call Autopilot',
-  description: 'Radiology Call Scheduling System',
+  description: 'Neuroradiology Weekend Call Scheduling System',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

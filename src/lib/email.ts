@@ -24,7 +24,7 @@ export async function sendPasswordResetEmail(email: string, name: string, resetU
         <p>This link expires in 1 hour.</p>
         <p>If you didn't request this, you can safely ignore this email.</p>
         <hr />
-        <p style="color: #6b7280; font-size: 12px;">Neurorad Call Autopilot - Radiology Call Scheduling System</p>
+        <p style="color: #6b7280; font-size: 12px;">Neurorad Call Autopilot - Neuroradiology Weekend Call Scheduling System</p>
       </div>
     `,
   })
@@ -43,7 +43,7 @@ export async function sendVerificationEmail(email: string, name: string, verifyU
         <a href="${verifyUrl}" style="display: inline-block; background-color: #1e40af; color: white; padding: 12px 24px; border-radius: 6px; text-decoration: none; margin: 16px 0;">Verify Email</a>
         <p>This link expires in 24 hours.</p>
         <hr />
-        <p style="color: #6b7280; font-size: 12px;">Neurorad Call Autopilot - Radiology Call Scheduling System</p>
+        <p style="color: #6b7280; font-size: 12px;">Neurorad Call Autopilot - Neuroradiology Weekend Call Scheduling System</p>
       </div>
     `,
   })

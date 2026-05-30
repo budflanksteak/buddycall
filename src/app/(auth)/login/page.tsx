@@ -57,7 +57,7 @@ export default function LoginPage() {
             </div>
           </div>
           <h1 className="text-3xl font-bold text-blue-900">Neurorad Call Autopilot</h1>
-          <p className="text-muted-foreground mt-1">Radiology Call Scheduling System</p>
+          <p className="text-muted-foreground mt-1">Neuroradiology Weekend Call Scheduling System</p>
         </div>
 
         <Card>
