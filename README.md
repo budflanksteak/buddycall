@@ -1,6 +1,6 @@
-# Neurorad AutoPilot — BuddyCall
+# Neurorad Call Autopilot — BuddyCall
 
-A full-stack web application for equitable Neuroradiology weekend and holiday call scheduling. Automatically distributes primary call assignments across faculty by FTE, respects individual preferences and blocked dates, and tracks cumulative workload credits across academic years.
+A full-stack web application for equitable Neuroradiology weekend and holiday call scheduling. Automatically distributes primary call assignments across faculty by cFTE, respects individual preferences and blocked dates, and tracks cumulative workload credits across academic years.
 
 **Live app:** [https://neuroradbuddycall.vercel.app](https://neuroradbuddycall.vercel.app)
 
@@ -8,19 +8,32 @@ A full-stack web application for equitable Neuroradiology weekend and holiday ca
 
 ## Features
 
+### Scheduling
 - **Two call types** — Loner (independent) and Buddy (always paired with a partner)
-- **Auto-assignment engine** — Two-phase scheduler that prioritises primary call equity across all faculty proportional to FTE
-- **Faculty preferences** — Weekend style (full/single day), holiday grouping, assignment spacing, FTE, and permanently blocked holidays
-- **Blocked dates calendar** — Faculty can block individual dates per schedule period
-- **Manual schedule editing** — Admin can override any individual assignment after auto-assign runs
-- **Unassigned date handling** — Fully-blocked dates appear as red rows flagged for manual reconciliation rather than being silently dropped
+- **Auto-assignment engine** — Two-phase scheduler that prioritises primary call equity across all faculty proportional to cFTE
+- **Faculty preferences** — Weekend style (full/single day), holiday grouping, assignment spacing, cFTE, and permanently blocked holidays
+- **Manual schedule editing** — Admin can override any individual Primary or Buddy assignment after auto-assign runs via an inline edit modal
+- **Unassigned date handling** — When all faculty have a date blocked, an explicit unassigned row is saved (red background, Assign button) rather than silently dropping the date; flagged for manual reconciliation
+- **Publish & credit log** — Publishing a schedule locks it and automatically updates the perpetual academic year credit log
+
+### Faculty & Calendar
+- **Blocked dates calendar** — Faculty block individual weekend/holiday dates per schedule period
+- **Admin calendar view** — Admin can view and edit any faculty member's availability calendar via a faculty selector dropdown
 - **Perpetual credit log** — Cumulative primary days, buddy days, holiday days, and workload units tracked per academic year (July–June), carried forward across schedule blocks
+
+### Qgenda Integration
+- **StaffKey linking** — Each faculty record stores a `staffKey` (UUID) matching the corresponding record in the external qgenda MySQL staff database
+- **Qgenda History tab** — Per-faculty summary of historic and future call assignments sourced from qgenda, broken down by Saturday, Sunday, and Holiday for both Primary and Buddy call
+- **Expandable row detail** — Clicking a faculty row reveals a full assignment list with date, day, Primary/Buddy badge, Holiday/Upcoming flags, and task name
+- **Adjustable lookback** — Year filter buttons (2019 → current year) control how far back the history table and export reach
+- **Qgenda XLSX export** — Downloads two sheets: Summary (per-faculty counts + totals) and All Assignments (every individual log entry)
+- **Qgenda sync agent** — Standalone hourly Node.js agent (`qgenda-sync`) that polls the qgenda `liveschedule` MySQL table and writes call history to `QgendaLog` and No Call dates to `BlockedDate` in Supabase
+
+### Admin & Auth
+- **Admin dashboard** — Manage faculty, set preferences on behalf of any user, create/publish/delete schedules, view credit log
 - **XLSX export** — Schedule and faculty summary export with workload unit breakdown
 - **Password reset via email** — Gmail SMTP with app password
-- **Admin dashboard** — Manage faculty, set preferences on behalf of users, create/publish/delete schedules, view credit log
-- **StaffKey linking** — Each faculty record stores a `staffKey` (UUID) matching the corresponding record in the external qgenda MySQL staff database
-- **Qgenda History tab** — Admin view showing historic and future call assignments sourced directly from qgenda, with per-faculty counts of Primary and Buddy call days broken down by Saturday, Sunday, and Holiday
-- **Qgenda sync agent** — Standalone hourly Node.js agent (`qgenda-sync`) that polls the qgenda `liveschedule` MySQL table and writes call history to `QgendaLog` and No Call dates to `BlockedDate` in Supabase
+- **Temp password logic** — New faculty accounts use lowercase last name; names under 5 characters are padded with `2026`
 
 ---
 
