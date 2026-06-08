@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Navbar } from '@/components/navbar'
@@ -13,6 +13,7 @@ import {
   Users, Calendar, Download, RefreshCw, Play, Trash2, CheckCircle,
   AlertTriangle, TrendingUp, Shield, ChevronDown, ChevronUp, Loader2,
   FileSpreadsheet, ClipboardList, UserPlus, Plus, X, Copy, Pencil, BookOpen,
+  Image as ImageIcon,
 } from 'lucide-react'
 
 const FEDERAL_HOLIDAYS = [
@@ -85,6 +86,10 @@ export default function AdminPage() {
   const [schedules, setSchedules] = useState<Schedule[]>([])
   const [selectedSchedule, setSelectedSchedule] = useState<ScheduleDetail | null>(null)
   const [lastResult, setLastResult] = useState<AssignmentResult | null>(null)
+  const [viewStats, setViewStats] = useState<AssignmentResult['stats'] | null>(null)
+  const [viewStatsLoading, setViewStatsLoading] = useState(false)
+  const [downloadingImage, setDownloadingImage] = useState(false)
+  const summaryCardRef = useRef<HTMLDivElement>(null)
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [reassigning, setReassigning] = useState(false)
@@ -337,7 +342,44 @@ export default function AdminPage() {
     const res = await fetch(`/api/admin/schedule/${scheduleId}`)
     const data = await res.json()
     setSelectedSchedule(data)
+    setViewStats(null)
     setTab('view')
+  }
+
+  async function regenerateSummary(scheduleId: string) {
+    setViewStatsLoading(true)
+    try {
+      const res = await fetch(`/api/admin/schedule/${scheduleId}?stats=1`)
+      if (!res.ok) throw new Error('Failed to load summary')
+      const data = await res.json()
+      setViewStats(data.stats)
+    } catch {
+      toast({ title: 'Failed to regenerate summary', variant: 'destructive' })
+    } finally {
+      setViewStatsLoading(false)
+    }
+  }
+
+  async function downloadSummaryImage() {
+    if (!summaryCardRef.current || !selectedSchedule) return
+    setDownloadingImage(true)
+    try {
+      const html2canvas = (await import('html2canvas')).default
+      const canvas = await html2canvas(summaryCardRef.current, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true,
+      })
+      const dataUrl = canvas.toDataURL('image/png')
+      const link = document.createElement('a')
+      link.href = dataUrl
+      link.download = `schedule-summary-${selectedSchedule.name.replace(/\s+/g, '-')}.png`
+      link.click()
+    } catch {
+      toast({ title: 'Failed to generate image', variant: 'destructive' })
+    } finally {
+      setDownloadingImage(false)
+    }
   }
 
   function openAssignmentEdit(a: ScheduleDetail['assignments'][number]) {
@@ -1166,13 +1208,49 @@ export default function AdminPage() {
                   </Badge>
                 </p>
               </div>
-              <a href={`/api/admin/schedule/${selectedSchedule.id}?export=xlsx`} download>
-                <Button variant="outline" className="gap-2">
-                  <FileSpreadsheet className="h-4 w-4" />
-                  Download XLSX
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => regenerateSummary(selectedSchedule.id)}
+                  disabled={viewStatsLoading}
+                >
+                  {viewStatsLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <TrendingUp className="h-4 w-4" />}
+                  Regenerate Summary
                 </Button>
-              </a>
+                <a href={`/api/admin/schedule/${selectedSchedule.id}?export=xlsx`} download>
+                  <Button variant="outline" className="gap-2">
+                    <FileSpreadsheet className="h-4 w-4" />
+                    Download XLSX
+                  </Button>
+                </a>
+              </div>
             </div>
+
+            {viewStats && (
+              <div className="space-y-2">
+                <div ref={summaryCardRef} className="bg-white p-1">
+                  <SummaryCard
+                    scheduleName={selectedSchedule.name}
+                    startDate={selectedSchedule.startDate}
+                    endDate={selectedSchedule.endDate}
+                    stats={viewStats}
+                  />
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="gap-2"
+                    onClick={downloadSummaryImage}
+                    disabled={downloadingImage}
+                  >
+                    {downloadingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
+                    Download Summary as Image
+                  </Button>
+                </div>
+              </div>
+            )}
 
             {selectedSchedule.assignments.filter(a => !a.primaryUser).length > 0 && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
@@ -1443,6 +1521,122 @@ export default function AdminPage() {
         </div>
       )}
     </div>
+  )
+}
+
+function SummaryCard({
+  scheduleName, startDate, endDate, stats,
+}: {
+  scheduleName: string
+  startDate: string
+  endDate: string
+  stats: AssignmentResult['stats']
+}) {
+  const scoreColor = stats.score >= 80 ? 'text-green-600' : stats.score >= 60 ? 'text-yellow-600' : 'text-red-600'
+  const scoreBg = stats.score >= 80 ? 'bg-green-50 border-green-200' : stats.score >= 60 ? 'bg-yellow-50 border-yellow-200' : 'bg-red-50 border-red-200'
+
+  return (
+    <Card className={`border ${scoreBg}`}>
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <TrendingUp className="h-5 w-5 text-muted-foreground" />
+            <div>
+              <CardTitle className="text-base">{scheduleName} — Summary</CardTitle>
+              <CardDescription>
+                {format(new Date(startDate), 'MMM d, yyyy')} – {format(new Date(endDate), 'MMM d, yyyy')}
+                {' · '}
+                {stats.assignedDays}/{stats.totalDays} days assigned · {stats.warnings.length} warnings
+              </CardDescription>
+            </div>
+          </div>
+          <div className="text-center">
+            <div className={`text-3xl font-bold ${scoreColor}`}>{stats.score}</div>
+            <div className="text-xs text-muted-foreground">Equity Score</div>
+          </div>
+        </div>
+      </CardHeader>
+
+      <CardContent className="space-y-4">
+        {/* Legend */}
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="bg-blue-50 border border-blue-100 rounded p-2">
+            <p className="font-semibold text-blue-800 mb-0.5">Equity Score = Primary Day Balance</p>
+            <p className="text-blue-700">Every faculty member (loner &amp; buddy) targets the same number of primary call days proportional to cFTE. Score penalises deviation from that target.</p>
+          </div>
+          <div className="bg-slate-50 border border-slate-100 rounded p-2">
+            <p className="font-semibold text-slate-800 mb-0.5">Workload Units (credit log only)</p>
+            <p className="text-slate-700"><strong>Loner</strong> primary day = <strong>2 units</strong> — covers both roles alone. <strong>Buddy</strong> primary or buddy day = <strong>1 unit</strong> each. Tracked across the academic year.</p>
+          </div>
+        </div>
+
+        {/* Faculty breakdown */}
+        <div>
+          <h4 className="text-sm font-semibold mb-2">Faculty Assignment Breakdown</h4>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b text-muted-foreground">
+                  <th className="text-left py-1 pr-3">Name</th>
+                  <th className="text-center py-1 pr-3">Type</th>
+                  <th className="text-center py-1 pr-3">Primary Days</th>
+                  <th className="text-center py-1 pr-3">Target</th>
+                  <th className="text-center py-1 pr-3">Balance</th>
+                  <th className="text-center py-1 pr-3">Buddy Days</th>
+                  <th className="text-center py-1 pr-3">Holidays</th>
+                  <th className="text-center py-1">Workload Units</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stats.userStats.map(u => (
+                  <tr key={u.userId} className="border-b last:border-0">
+                    <td className="py-1.5 pr-3 font-medium">{u.name}</td>
+                    <td className="py-1.5 pr-3 text-center">
+                      <Badge variant={u.callType === 'buddy' ? 'info' : 'secondary'} className="text-xs capitalize">{u.callType}</Badge>
+                    </td>
+                    <td className="py-1.5 pr-3 text-center font-bold text-blue-700">{u.primaryDays}</td>
+                    <td className="py-1.5 pr-3 text-center text-muted-foreground">{u.targetPrimaryDays}</td>
+                    <td className="py-1.5 pr-3 text-center">
+                      <span className={`font-semibold ${u.primaryBalance > 1 ? 'text-red-600' : u.primaryBalance < -1 ? 'text-orange-600' : 'text-green-600'}`}>
+                        {u.primaryBalance > 0 ? `+${u.primaryBalance}` : u.primaryBalance}
+                      </span>
+                    </td>
+                    <td className="py-1.5 pr-3 text-center text-green-700">{u.buddyDays}</td>
+                    <td className="py-1.5 pr-3 text-center text-amber-700">{u.holidays}</td>
+                    <td className="py-1.5 text-center">
+                      <span className="font-semibold" title={u.callType === 'loner' ? `${u.primaryDays} days × 2 (loner double-credit)` : `${u.primaryDays} primary + ${u.buddyDays} buddy`}>
+                        {u.workloadUnits}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Warnings */}
+        {stats.warnings.length > 0 && (
+          <div>
+            <h4 className="text-sm font-semibold mb-2 flex items-center gap-1.5">
+              <AlertTriangle className="h-3.5 w-3.5 text-yellow-600" />
+              Warnings ({stats.warnings.length})
+            </h4>
+            <div className="space-y-1 max-h-40 overflow-y-auto">
+              {stats.warnings.map((w, i) => (
+                <div key={i} className="text-xs bg-yellow-50 border border-yellow-200 rounded px-2 py-1 text-yellow-800">
+                  {w}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <p className="text-[10px] text-muted-foreground text-right">
+          Generated {format(new Date(), 'MMM d, yyyy h:mm a')} · Neurorad Call Autopilot
+        </p>
+      </CardContent>
+    </Card>
   )
 }
 

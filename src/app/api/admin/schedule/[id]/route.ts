@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { generateScheduleXLSX } from '@/lib/xlsx-export'
+import { computeScheduleStats } from '@/lib/scheduler'
 import { format } from 'date-fns'
 
 export async function GET(req: Request, { params }: { params: { id: string } }) {
@@ -29,6 +30,15 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
 
   const url = new URL(req.url)
   const exportFormat = url.searchParams.get('export')
+
+  if (url.searchParams.get('stats') === '1') {
+    const stats = await computeScheduleStats(
+      params.id,
+      new Date(schedule.startDate),
+      new Date(schedule.endDate)
+    )
+    return NextResponse.json({ schedule, stats })
+  }
 
   if (exportFormat === 'xlsx') {
     // Build per-user stats for the summary sheet

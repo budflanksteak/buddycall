@@ -287,6 +287,127 @@ export async function autoAssignSchedule(
   }
 }
 
+// ── Read-only stats regeneration for a saved schedule (does NOT touch assignments) ──
+export async function computeScheduleStats(
+  scheduleId: string,
+  startDate: Date,
+  endDate: Date
+): Promise<SchedulerResult['stats']> {
+
+  const users = await prisma.user.findMany({
+    where: { isActive: true, profileComplete: true },
+  })
+
+  const assignments = await prisma.callAssignment.findMany({
+    where: { scheduleId },
+    include: {
+      primaryUser: { select: { id: true, name: true, callType: true, fte: true } },
+      buddyUser:   { select: { id: true, name: true, callType: true, fte: true } },
+    },
+    orderBy: { date: 'asc' },
+  })
+
+  // ── Build call day list to compute totals/targets for the period ─────────
+  const holidayNameMap = new Map<string, string>()
+  for (let y = startDate.getFullYear(); y <= endDate.getFullYear(); y++) {
+    for (const h of getFederalHolidays(y)) {
+      holidayNameMap.set(format(h.date, 'yyyy-MM-dd'), h.name)
+    }
+  }
+
+  const callDays: CallDay[] = []
+  for (const day of eachDayOfInterval({ start: startDate, end: endDate })) {
+    const ds = format(day, 'yyyy-MM-dd')
+    const isHol = holidayNameMap.has(ds)
+    const isSat = isSaturday(day)
+    const isSun = isSunday(day)
+    if (isSat || isSun || isHol) {
+      callDays.push({ date: day, type: isHol ? 'holiday' : isSat ? 'saturday' : 'sunday' })
+    }
+  }
+
+  const totalDays = callDays.length
+  const totalFTE  = users.reduce((s, u) => s + u.fte, 0) || 1
+
+  const primaryTarget = new Map<string, number>()
+  users.forEach(u => primaryTarget.set(u.id, (u.fte / totalFTE) * totalDays))
+
+  // ── Tally actual counts from saved assignments ───────────────────────────
+  const primaryCount = new Map<string, number>()
+  const buddyCount   = new Map<string, number>()
+  const holidayCount = new Map<string, number>()
+  const nameMap      = new Map<string, string>()
+  const callTypeMap  = new Map<string, string>()
+  users.forEach(u => {
+    primaryCount.set(u.id, 0); buddyCount.set(u.id, 0); holidayCount.set(u.id, 0)
+    nameMap.set(u.id, u.name || u.id)
+    callTypeMap.set(u.id, u.callType || 'unknown')
+  })
+
+  const warnings: string[] = []
+
+  for (const a of assignments) {
+    const isHol = a.dayType === 'holiday'
+
+    if (a.primaryUser) {
+      if (!primaryCount.has(a.primaryUser.id)) {
+        primaryCount.set(a.primaryUser.id, 0)
+        buddyCount.set(a.primaryUser.id, 0)
+        holidayCount.set(a.primaryUser.id, 0)
+        primaryTarget.set(a.primaryUser.id, primaryTarget.get(a.primaryUser.id) || 0)
+        nameMap.set(a.primaryUser.id, a.primaryUser.name || a.primaryUser.id)
+        callTypeMap.set(a.primaryUser.id, a.primaryUser.callType || 'unknown')
+      }
+      primaryCount.set(a.primaryUser.id, (primaryCount.get(a.primaryUser.id) || 0) + 1)
+      if (isHol) holidayCount.set(a.primaryUser.id, (holidayCount.get(a.primaryUser.id) || 0) + 1)
+    } else {
+      warnings.push(`${format(new Date(a.date), 'MMM d, yyyy')}: No faculty assigned — manual assignment required.`)
+    }
+
+    if (a.buddyUser) {
+      if (!buddyCount.has(a.buddyUser.id)) {
+        primaryCount.set(a.buddyUser.id, primaryCount.get(a.buddyUser.id) || 0)
+        buddyCount.set(a.buddyUser.id, 0)
+        holidayCount.set(a.buddyUser.id, holidayCount.get(a.buddyUser.id) || 0)
+        primaryTarget.set(a.buddyUser.id, primaryTarget.get(a.buddyUser.id) || 0)
+        nameMap.set(a.buddyUser.id, a.buddyUser.name || a.buddyUser.id)
+        callTypeMap.set(a.buddyUser.id, a.buddyUser.callType || 'unknown')
+      }
+      buddyCount.set(a.buddyUser.id, (buddyCount.get(a.buddyUser.id) || 0) + 1)
+      if (isHol) holidayCount.set(a.buddyUser.id, (holidayCount.get(a.buddyUser.id) || 0) + 1)
+    }
+  }
+
+  const userStats: UserStat[] = Array.from(nameMap.keys()).map(id => {
+    const pd  = primaryCount.get(id) || 0
+    const bd  = buddyCount.get(id) || 0
+    const hd  = holidayCount.get(id) || 0
+    const tgt = Math.round((primaryTarget.get(id) || 0) * 10) / 10
+    const callType = callTypeMap.get(id) || 'unknown'
+    const units = callType === 'loner' ? pd * LONER_UNITS_PER_DAY : pd * BUDDY_UNITS_PER_DAY + bd * BUDDY_UNITS_PER_DAY
+    return {
+      userId: id,
+      name: nameMap.get(id) || id,
+      callType,
+      primaryDays: pd,
+      buddyDays: bd,
+      holidays: hd,
+      workloadUnits: units,
+      targetPrimaryDays: tgt,
+      primaryBalance: Math.round((pd - tgt) * 10) / 10,
+    }
+  }).sort((a, b) => a.name.localeCompare(b.name))
+
+  const deviations = userStats.map(s => Math.abs(s.primaryBalance))
+  const avgDev = deviations.reduce((a, b) => a + b, 0) / Math.max(deviations.length, 1)
+  const score = Math.max(0, Math.round(100 - avgDev * 15))
+
+  const assignedDays   = assignments.filter(a => a.primaryUserId !== null).length
+  const unassignedDays = totalDays - assignedDays
+
+  return { totalDays, assignedDays, unassignedDays, userStats, warnings, score }
+}
+
 // ── Credit log (called on publish) ───────────────────────────────────────────
 export async function publishCredits(scheduleId: string): Promise<void> {
   const assignments = await prisma.callAssignment.findMany({
