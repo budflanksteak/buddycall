@@ -13,6 +13,7 @@ A full-stack web application for equitable Neuroradiology weekend and holiday ca
 - **Auto-assignment engine** — Two-phase scheduler that prioritises primary call equity across all faculty proportional to cFTE
 - **Faculty preferences** — Weekend style (full/single day), holiday grouping, assignment spacing, cFTE, and permanently blocked holidays
 - **Manual schedule editing** — Admin can override any individual Primary or Buddy assignment after auto-assign runs via an inline edit modal
+- **Regenerate summary** — From the View Schedule tab, admin can regenerate the equity summary (score, faculty breakdown, warnings) for any saved schedule on demand — read-only, recomputed from the schedule's existing assignments without re-running auto-assign — and download it as a PNG image for sharing/archiving
 - **Unassigned date handling** — When all faculty have a date blocked, an explicit unassigned row is saved (red background, Assign button) rather than silently dropping the date; flagged for manual reconciliation
 - **Publish & credit log** — Publishing a schedule locks it and automatically updates the perpetual academic year credit log
 
