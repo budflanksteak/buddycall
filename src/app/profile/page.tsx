@@ -13,14 +13,11 @@ import { Loader2, CheckCircle, User, Users, UserCheck } from 'lucide-react'
 
 const FEDERAL_HOLIDAYS = [
   "New Year's Day",
-  "Martin Luther King Jr. Day",
   "Presidents' Day",
   "Memorial Day",
-  "Juneteenth",
   "Independence Day",
   "Labor Day",
   "Columbus Day",
-  "Veterans Day",
   "Thanksgiving Day",
   "Christmas Day",
 ]

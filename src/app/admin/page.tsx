@@ -17,9 +17,9 @@ import {
 } from 'lucide-react'
 
 const FEDERAL_HOLIDAYS = [
-  "New Year's Day", "Martin Luther King Jr. Day", "Presidents' Day",
-  "Memorial Day", "Juneteenth", "Independence Day", "Labor Day",
-  "Columbus Day", "Veterans Day", "Thanksgiving Day", "Christmas Day",
+  "New Year's Day", "Presidents' Day",
+  "Memorial Day", "Independence Day", "Labor Day",
+  "Columbus Day", "Thanksgiving Day", "Christmas Day",
 ]
 import { format } from 'date-fns'
 

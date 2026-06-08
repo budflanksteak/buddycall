@@ -21,17 +21,11 @@ export function getFederalHolidays(year: number): { date: Date; name: string }[]
   // New Year's Day - Jan 1 (observed)
   holidays.push({ date: observedDate(new Date(year, 0, 1)), name: "New Year's Day" })
 
-  // MLK Day - 3rd Monday in January
-  holidays.push({ date: nthWeekday(year, 0, 1, 3), name: "Martin Luther King Jr. Day" })
-
   // Presidents Day - 3rd Monday in February
   holidays.push({ date: nthWeekday(year, 1, 1, 3), name: "Presidents' Day" })
 
   // Memorial Day - Last Monday in May
   holidays.push({ date: lastWeekday(year, 4, 1), name: "Memorial Day" })
-
-  // Juneteenth - June 19 (observed)
-  holidays.push({ date: observedDate(new Date(year, 5, 19)), name: "Juneteenth" })
 
   // Independence Day - July 4 (observed)
   holidays.push({ date: observedDate(new Date(year, 6, 4)), name: "Independence Day" })
@@ -41,9 +35,6 @@ export function getFederalHolidays(year: number): { date: Date; name: string }[]
 
   // Columbus Day - 2nd Monday in October
   holidays.push({ date: nthWeekday(year, 9, 1, 2), name: "Columbus Day" })
-
-  // Veterans Day - Nov 11 (observed)
-  holidays.push({ date: observedDate(new Date(year, 10, 11)), name: "Veterans Day" })
 
   // Thanksgiving - 4th Thursday in November
   holidays.push({ date: nthWeekday(year, 10, 4, 4), name: "Thanksgiving Day" })
