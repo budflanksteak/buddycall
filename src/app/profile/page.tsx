@@ -17,7 +17,6 @@ const FEDERAL_HOLIDAYS = [
   "Memorial Day",
   "Independence Day",
   "Labor Day",
-  "Columbus Day",
   "Thanksgiving Day",
   "Christmas Day",
 ]

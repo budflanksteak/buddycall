@@ -19,7 +19,7 @@ import {
 const FEDERAL_HOLIDAYS = [
   "New Year's Day", "Presidents' Day",
   "Memorial Day", "Independence Day", "Labor Day",
-  "Columbus Day", "Thanksgiving Day", "Christmas Day",
+  "Thanksgiving Day", "Christmas Day",
 ]
 import { format } from 'date-fns'
 

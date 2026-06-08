@@ -33,9 +33,6 @@ export function getFederalHolidays(year: number): { date: Date; name: string }[]
   // Labor Day - 1st Monday in September
   holidays.push({ date: nthWeekday(year, 8, 1, 1), name: "Labor Day" })
 
-  // Columbus Day - 2nd Monday in October
-  holidays.push({ date: nthWeekday(year, 9, 1, 2), name: "Columbus Day" })
-
   // Thanksgiving - 4th Thursday in November
   holidays.push({ date: nthWeekday(year, 10, 4, 4), name: "Thanksgiving Day" })
 
